@@ -8,6 +8,8 @@ on:
 
 permissions:
   contents: write
+  id-token: write      # artifact attestations (build provenance)
+  attestations: write
 
 jobs:
   release:
@@ -27,6 +29,17 @@ jobs:
             echo "::error::tag $GITHUB_REF_NAME does not match manifest.json version $v"
             exit 1
           fi
+
+      # Lets users verify the assets were built from this repo. Free on public
+      # repos; private repos on a personal plan don't support it, so don't fail.
+      - name: Attest release assets
+        uses: actions/attest-build-provenance@v2
+        continue-on-error: true
+        with:
+          subject-path: |
+            main.js
+            manifest.json
+            *.css
 
       - name: Create release
         env:
