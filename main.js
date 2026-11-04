@@ -1,5 +1,5 @@
 /*
- * Editor Enhancer 1.2.2 - by paipa, MIT License
+ * Editor Enhancer 1.3.0 - by paipa, MIT License
  * https://github.com/Paipa03/obsidian-editor-enhancer
  *
  * Maintainer notes:
@@ -11,6 +11,97 @@
  * - Any change to the shared engine goes into both plugins in the same release,
  *   tested with both installed and with each one installed alone.
  */
+
+// ---- i18n ----
+// UI text. English is the base language; PAIPA_I18N_ZH maps each English
+// string to Simplified Chinese. paipaLang mirrors Editor Enhancer's settings.language
+// ("auto" | "en" | "zh"); "auto" follows Obsidian's own language.
+let paipaLang = "auto";
+function paipaSetLang(value) {
+  paipaLang = value === "en" || value === "zh" ? value : "auto";
+}
+function paipaObsidianLang() {
+  try {
+    const o = require("obsidian");
+    const l = (typeof o.getLanguage === "function" && o.getLanguage()) || window.localStorage.getItem("language") || "en";
+    return /^zh/i.test(String(l)) ? "zh" : "en";
+  } catch (e) { return "en"; }
+}
+function paipaEffectiveLang() {
+  return paipaLang === "en" || paipaLang === "zh" ? paipaLang : paipaObsidianLang();
+}
+function paipaT(en, vars) {
+  let s = en;
+  if (paipaEffectiveLang() === "zh" && Object.prototype.hasOwnProperty.call(PAIPA_I18N_ZH, en)) s = PAIPA_I18N_ZH[en];
+  if (vars) s = s.replace(/\{(\w+)\}/g, (m, k) => Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m);
+  return s;
+}
+const PAIPA_I18N_ZH = {
+  "Web bookmark": "网页书签",
+  "Editor Enhancer": "Editor Enhancer（优化编辑器）",
+  "Language": "语言",
+  "Follow Obsidian's language, or choose one for this plugin.": "跟随 Obsidian 的语言，或为本插件单独选择。",
+  "Follow Obsidian": "跟随 Obsidian",
+  "Feature modules (all on by default, each can be turned off separately)": "功能模块（全部默认开启，可独立开关）",
+  "Notion blocks": "Notion 块功能",
+  "Six-dot drag handles, block menu, plus button to insert lines, multi-select drag and block spacing. When off, native block interaction returns; other modules are unaffected.": "六点拖拽手柄、块菜单、加号插行、多选整体拖拽与块间距排版。关闭后恢复原生块交互，其他模块不受影响。",
+  "Toggle lists": "Toggle List 功能",
+  "Notion-style collapsible lists and related changes to native behavior (heading folds taken over, protected lines, etc.). When off, toggle markers show as plain text; turning it back on restores them.": "Notion 式可折叠列表及相关原生行为修改（heading 折叠接管、保护行等）。关闭后 TL 标记显示为原始文本，重新开启即恢复。",
+  "List markers as a unit": "列表标记整体化",
+  "In Live Preview, the bullet / number / checkbox in front of a list line acts as one unit: the cursor never stops inside it, one Backspace removes the whole marker (a nested item first moves up one level), Delete at the end of a line joins the next item, and ← from the start of the text goes straight to the end of the previous line. When off, Obsidian's native character-by-character deletion returns.": "实时预览里，列表行前的圆点 / 数字 / 复选框是一个整体：光标不会停在标记里，Backspace 一次删掉整个标记（嵌套项先退一级），行尾 Delete 一次并入下一项，← 从文字开头直接到上一行末尾。关闭后恢复 Obsidian 原生的逐字符删除。",
+  "Context menu enhancements": "右键菜单增强",
+  "Tidies the right-click menu (this plugin's items are grouped in their own section and replace the native delete item) and enables \"Don't select line on right-click\". When off, the right-click menu fully returns to Obsidian's native behavior.": "整理右键菜单（本插件的菜单项集中为独立分组、替换原生删除项）以及「右键不选中整行」。关闭后右键菜单完全恢复 Obsidian 原生行为。",
+  "Table link navigation (mobile)": "表格链接跳转（手机端）",
+  "On mobile, tapping an internal link in a table opens it directly (as on desktop); tapping anywhere else still starts editing, and links that can't be resolved fall back to editing.": "手机上点按表格中的内部链接直接跳转（与电脑端一致）；点按链接以外的位置仍进入编辑，无法解析的链接回落为编辑。",
+  "Restore scroll position when returning to a page": "返回页面时恢复滚动位置",
+  "When you reopen a page viewed earlier in this session (for example, going back after following a link), the scroll position you left it at is restored; long pages no longer land at the bottom.": "重新打开本次会话看过的页面（如点击链接后返回）时，恢复离开时的滚动位置；长页面不再落到底端。",
+  "Details": "细项",
+  "Don't select line on right-click": "右键不选中整行",
+  "Right-click only opens the menu without selecting the whole line first; an existing selection is kept. Requires \"Context menu enhancements\".": "右键只打开菜单，不先选中整行；已有选区会被保留。需开启「右键菜单增强」。",
+  "Enable block spacing": "启用段落间距",
+  "Add Notion-style extra spacing between content blocks. Requires \"Notion blocks\".": "在内容块之间添加 Notion 风格的额外间距。需开启「Notion 块功能」。",
+  "Drag handle": "拖拽图标",
+  "Handle opacity": "图标透明度",
+  "Opacity before hover (0.1 – 1.0).": "悬停前的透明度（0.1 – 1.0）。",
+  "Handle distance from content": "图标距内容距离",
+  "Gap between the handle and the left edge of the content (0 – 40 px).": "图标与内容左缘的间距（0 – 40 px）。",
+  "Handle padding": "图标内边距",
+  "Distance from the dot grid to the handle's border (1 – 16 px).": "圆点阵列到图标边框的距离（1 – 16 px）。",
+  "Dot diameter": "圆点直径",
+  "1.5 – 8 px.": "1.5 – 8 px。",
+  "Dot spacing": "圆点间距",
+  "1 – 6 px.": "1 – 6 px。",
+  "Dot gray level": "圆点灰度",
+  "0 = white, 100 = black.": "0 = 白，100 = 黑。",
+  "Toggle triangle size": "Toggle 三角图标大小",
+  "10 – 28 px.": "10 – 28 px。",
+  "Drop indicator line": "拖拽插入位置横线",
+  "Line thickness": "横线粗细",
+  "1 – 8 px.": "1 – 8 px。",
+  "Line opacity": "横线不透明度",
+  "0.1 – 1.0.": "0.1 – 1.0。",
+  "Notion-style spacing": "Notion 风格行间距",
+  "Block spacing": "Block 间距",
+  "Spacing between adjacent content blocks (2 – 32 px).": "相邻内容块之间的间距（2 – 32 px）。",
+  "Line spacing within a block": "Block 内行间距",
+  "Extra spacing between lines of text within one block (0 = theme default, up to 20 px).": "同一 block 内多行文字的额外行距（0 = 主题默认，最大 20 px）。",
+  "Insert blank line below": "在下方插入空行",
+  "Toggle list": "折叠列表",
+  "(empty)": "（空）",
+  "Collapse toggle list": "收起折叠列表",
+  "Expand toggle list": "展开折叠列表",
+  "Toggle List is disabled in settings": "Toggle List 功能已在设置中关闭",
+  "Delete": "删除",
+  "This row is already a toggle list": "该行已经是折叠列表",
+  "Duplicate": "创建副本",
+  "Paste": "粘贴",
+  "Cut": "剪切",
+  "Insert line above": "在上方插入行",
+  "Insert line below": "在下方插入行",
+  "Duplicated below": "已在下方创建副本",
+  "Expiring block": "时效块"
+};
+// ---- end i18n ----
 
 var __defProp = Object.defineProperty;
 var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
@@ -80,7 +171,8 @@ var DEFAULT_SETTINGS = {
   contextMenuFeaturesEnabled: true,
   restoreScrollOnReopen: true,
   mobileTableLinkNav: true,
-  listMarkerFeaturesEnabled: true
+  listMarkerFeaturesEnabled: true,
+  language: "auto"
 };
 var HANDLE_W = 28;
 // Master switch mirrored from settings.tlFeaturesEnabled. Gating the two
@@ -705,7 +797,7 @@ function makeAddLineButtonEl() {
   const b = document.createElement("button");
   b.type = "button";
   b.className = "clickable-icon nsb-add-line-button";
-  b.setAttribute("aria-label", "Insert blank line below");
+  b.setAttribute("aria-label", paipaT("Insert blank line below"));
   try { import_obsidian.setIcon(b, "plus"); } catch (_) { b.textContent = "+"; }
   return b;
 }
@@ -778,7 +870,7 @@ function getBlockDragLabel(doc, startLine, fallbackEl) {
     const opener = doc.line(startLine + 1).text.trim();
     const toggle = getToggleByStartLine(doc, startLine);
     if (toggle && toggle.titleLine < doc.lines) {
-      labelText = toggleVisibleTitleText(doc, toggle).trim().substring(0, 60) || "Toggle list";
+      labelText = toggleVisibleTitleText(doc, toggle).trim().substring(0, 60) || paipaT("Toggle list");
     } else if (/^```web-bookmark/i.test(opener) && startLine + 2 <= doc.lines) {
       const parsed = JSON.parse(doc.line(startLine + 2).text.trim());
       labelText = (parsed.title || parsed.url || "").substring(0, 60);
@@ -786,7 +878,7 @@ function getBlockDragLabel(doc, startLine, fallbackEl) {
       labelText = opener.substring(0, 60);
     }
   } catch (_) {}
-  if (!labelText) labelText = (fallbackEl.textContent || "").trim().substring(0, 60) || "(empty)";
+  if (!labelText) labelText = (fallbackEl.textContent || "").trim().substring(0, 60) || paipaT("(empty)");
   return labelText;
 }
 
@@ -1584,7 +1676,7 @@ var NsbEditorViewPlugin = class {
         (t.open ? " is-open" : " is-closed") +
         (empty ? " is-empty" : "") +
         (this.plugin.activeToggleId === t.id ? " is-active" : "");
-      btn.setAttribute("aria-label", t.open ? "Collapse toggle list" : "Expand toggle list");
+      btn.setAttribute("aria-label", t.open ? paipaT("Collapse toggle list") : paipaT("Expand toggle list"));
       btn.style.top = (firstRowTop - scrollerRect.top + this.scroller.scrollTop + Math.max(0, (firstRowBottom - firstRowTop - size) / 2)) + "px";
       btn.style.left = (r.left - scrollerRect.left + this.scroller.scrollLeft + 4 + t.depth * 22) + "px";
       btn.addEventListener("mousedown", e => {
@@ -2089,7 +2181,22 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
       if (!menu || !Array.isArray(menu.items)) return;
       const order = ["Web bookmark", "Gallery", "Expiring block", "Delete", "Toggle list"];
       const titleOf = item => String(item && (item.titleEl ? item.titleEl.textContent : item.title) || "").trim();
-      const rank = item => { const k = order.indexOf(titleOf(item)); return k < 0 ? order.length : k; };
+      const orderIcons = ["link", "images", "hourglass", "trash", "list-plus"];
+      const iconOf = item => {
+        try {
+          if (item && typeof item.icon === "string") return item.icon;
+          const svg = item && item.iconEl && item.iconEl.querySelector && item.iconEl.querySelector("svg");
+          const m = svg && /(?:^|\s)lucide-([\w-]+)/.exec(svg.getAttribute("class") || "");
+          return m ? m[1] : "";
+        } catch (_) { return ""; }
+      };
+      // Titles may be translated: match the English title or its Chinese text, then the icon.
+      const rank = item => {
+        const title = titleOf(item);
+        let k = order.findIndex(en => en === title || PAIPA_I18N_ZH[en] === title);
+        if (k < 0) { const icon = iconOf(item); k = icon ? orderIcons.indexOf(icon) : -1; }
+        return k < 0 ? order.length : k;
+      };
       const inSection = item => !!item && item.section === "editor-enhancer";
       const group = menu.items.filter(inSection).sort((a, b) => rank(a) - rank(b));
       menu.items = menu.items.filter(item => !inSection(item)).concat(group);
@@ -2126,10 +2233,10 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
     this.registerEvent(this.app.workspace.on("file-open", file => this.restoreScrollPositionOnOpen(file)));
     this.addCommand({
       id: "insert-toggle-list",
-      name: "Toggle list",
+      name: paipaT("Toggle list"),
       editorCallback: (editor) => {
         if (this.settings.tlFeaturesEnabled === false) {
-          new import_obsidian.Notice("Toggle List is disabled in settings");
+          new import_obsidian.Notice(paipaT("Toggle List is disabled in settings"));
           return;
         }
         this.makeToggleListFromEditorMenu(editor);
@@ -2146,13 +2253,13 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
         return i;
       };
       menu.addItem(i => asOwnSection(i)
-        .setTitle("Delete")
+        .setTitle(paipaT("Delete"))
         .setIcon("trash")
         .setDisabled(!this.canDeleteFromEditorMenu(editor))
         .onClick(() => this.deleteEditorSelectionFromMenu(editor)));
       if (this.settings.tlFeaturesEnabled !== false) {
         menu.addItem(i => asOwnSection(i)
-          .setTitle("Toggle list")
+          .setTitle(paipaT("Toggle list"))
           .setIcon("list-plus")
           .setDisabled(!this.canMakeToggleListFromEditor(editor))
           .onClick(() => this.makeToggleListFromEditorMenu(editor)));
@@ -4084,7 +4191,7 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
       const doc = editor.cm.state.doc;
       const toggles = scanToggleBlocks(doc);
       if (toggles.some(t => startLine === t.startLine || startLine === t.titleLine || startLine === t.endLine)) {
-        new import_obsidian.Notice("This row is already a toggle list");
+        new import_obsidian.Notice(paipaT("This row is already a toggle list"));
         editor.focus();
         return true;
       }
@@ -4940,16 +5047,16 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
     setTimeout(()=>block.classList.remove("nsb-selected"),1200);
     const menu=new import_obsidian.Menu();
     this.activeContextMenu=menu;
-    menu.addItem(i=>i.setTitle("Duplicate").setIcon("copy-plus").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.duplicate(block,editor,target); }));
-    menu.addItem(i=>i.setTitle("Paste").setIcon("clipboard").setDisabled(!isEdit).onClick(()=>{ if(isEdit){this.selectInEditor(block,editor,target);document.execCommand("paste");} }));
-    menu.addItem(i=>i.setTitle("Cut").setIcon("scissors").setDisabled(!isEdit).onClick(()=>{ if(isEdit){this.selectInEditor(block,editor,target);document.execCommand("cut");} }));
-    menu.addItem(i=>i.setTitle("Delete").setIcon("trash").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.deleteTargetBlockFromMenu(editor,target); }));
+    menu.addItem(i=>i.setTitle(paipaT("Duplicate")).setIcon("copy-plus").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.duplicate(block,editor,target); }));
+    menu.addItem(i=>i.setTitle(paipaT("Paste")).setIcon("clipboard").setDisabled(!isEdit).onClick(()=>{ if(isEdit){this.selectInEditor(block,editor,target);document.execCommand("paste");} }));
+    menu.addItem(i=>i.setTitle(paipaT("Cut")).setIcon("scissors").setDisabled(!isEdit).onClick(()=>{ if(isEdit){this.selectInEditor(block,editor,target);document.execCommand("cut");} }));
+    menu.addItem(i=>i.setTitle(paipaT("Delete")).setIcon("trash").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.deleteTargetBlockFromMenu(editor,target); }));
     menu.addSeparator();
-    menu.addItem(i=>i.setTitle("Insert line above").setIcon("arrow-up").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.insertLine(block,editor,"above",target); }));
-    menu.addItem(i=>i.setTitle("Insert line below").setIcon("arrow-down").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.insertLine(block,editor,"below",target); }));
+    menu.addItem(i=>i.setTitle(paipaT("Insert line above")).setIcon("arrow-up").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.insertLine(block,editor,"above",target); }));
+    menu.addItem(i=>i.setTitle(paipaT("Insert line below")).setIcon("arrow-down").setDisabled(!isEdit).onClick(()=>{ if(isEdit) this.insertLine(block,editor,"below",target); }));
     if (this.settings.tlFeaturesEnabled !== false) {
       menu.addSeparator();
-      menu.addItem(i=>i.setTitle("Toggle list").setIcon("list-plus").setDisabled(!canMakeToggle).onClick(()=>{ if(canMakeToggle) this.insertToggleListAfterTarget(editor,target); }));
+      menu.addItem(i=>i.setTitle(paipaT("Toggle list")).setIcon("list-plus").setDisabled(!canMakeToggle).onClick(()=>{ if(canMakeToggle) this.insertToggleListAfterTarget(editor,target); }));
     }
     // Provider items (Gallery, Section) close the menu, after this plugin's own.
     if (isEdit) for (const provider of this.blockProviders()) provider.addBlockMenu?.(menu, editor, target);
@@ -5030,12 +5137,12 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
         // hidden inline marker is never split or cloned.
         const closeLen = (editor.getLine(toggle.endLine) || "").length;
         editor.replaceRange("\n"+info.text,{line:toggle.endLine,ch:closeLen});
-        new import_obsidian.Notice("Duplicated below");
+        new import_obsidian.Notice(paipaT("Duplicated below"));
         return;
       }
     }
     editor.replaceRange("\n"+info.text,{line:info.line,ch:(editor.getLine(info.line)||"").length});
-    new import_obsidian.Notice("Duplicated below");
+    new import_obsidian.Notice(paipaT("Duplicated below"));
   }
   insertLine(block,editor,dir,target){
     if (editor && editor.cm && this.insertBlankLineAroundTargetCM(editor.cm, target, dir)) return;
@@ -5190,8 +5297,9 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
     }));
   }
 
-  async loadSettings(){this.settings=Object.assign({},DEFAULT_SETTINGS,await this.loadData());}
+  async loadSettings(){this.settings=Object.assign({},DEFAULT_SETTINGS,await this.loadData());paipaSetLang(this.settings.language);}
   async saveSettings(){
+    paipaSetLang(this.settings.language);
     await this.saveData(this.settings);
     setNsbTlFeaturesEnabled(this.settings.tlFeaturesEnabled);
     setNsbBlockFeaturesEnabled(this.settings.blockFeaturesEnabled);
@@ -5250,38 +5358,44 @@ var SettingsTab=class extends import_obsidian.PluginSettingTab{
   constructor(app,plugin){super(app,plugin);this.plugin=plugin;}
   display(){
     const{containerEl}=this; containerEl.empty();
-    containerEl.createEl("h2",{text:"Editor Enhancer（优化编辑器）"});
+    containerEl.createEl("h2",{text:paipaT("Editor Enhancer")});
 
     new import_obsidian.Setting(containerEl)
-      .setName("启用开发者模式")
-      .setDesc("显示全部高级设置。")
-      .addToggle(t=>t.setValue(this.plugin.settings.developerMode === true).onChange(async v=>{
-        this.plugin.settings.developerMode=v;
-        await this.plugin.saveSettings();
-        this.display();
-      }));
+      .setName(paipaT("Language"))
+      .setDesc(paipaT("Follow Obsidian's language, or choose one for this plugin."))
+      .addDropdown(d=>d
+        .addOption("auto", paipaT("Follow Obsidian"))
+        .addOption("en", "English")
+        .addOption("zh", "中文")
+        .setValue(["auto","en","zh"].includes(this.plugin.settings.language) ? this.plugin.settings.language : "auto")
+        .onChange(async v=>{
+          this.plugin.settings.language=v;
+          paipaSetLang(v);
+          await this.plugin.saveSettings();
+          this.display();
+        }));
 
-    containerEl.createEl("h3",{text:"功能模块（全部默认开启，可独立开关）"});
+    containerEl.createEl("h3",{text:paipaT("Feature modules (all on by default, each can be turned off separately)")});
 
     new import_obsidian.Setting(containerEl)
-      .setName("Notion 块功能")
-      .setDesc("六点拖拽手柄、块菜单、加号插行、多选整体拖拽与块间距排版。关闭后恢复原生块交互，其他模块不受影响。")
+      .setName(paipaT("Notion blocks"))
+      .setDesc(paipaT("Six-dot drag handles, block menu, plus button to insert lines, multi-select drag and block spacing. When off, native block interaction returns; other modules are unaffected."))
       .addToggle(t=>t.setValue(this.plugin.settings.blockFeaturesEnabled !== false).onChange(async v=>{
         this.plugin.settings.blockFeaturesEnabled=v;
         await this.plugin.saveSettings();
       }));
 
     new import_obsidian.Setting(containerEl)
-      .setName("Toggle List 功能")
-      .setDesc("Notion 式可折叠列表及相关原生行为修改（heading 折叠接管、保护行等）。关闭后 TL 标记显示为原始文本，重新开启即恢复。")
+      .setName(paipaT("Toggle lists"))
+      .setDesc(paipaT("Notion-style collapsible lists and related changes to native behavior (heading folds taken over, protected lines, etc.). When off, toggle markers show as plain text; turning it back on restores them."))
       .addToggle(t=>t.setValue(this.plugin.settings.tlFeaturesEnabled !== false).onChange(async v=>{
         this.plugin.settings.tlFeaturesEnabled=v;
         await this.plugin.saveSettings();
       }));
 
     new import_obsidian.Setting(containerEl)
-      .setName("列表标记整体化")
-      .setDesc("实时预览里，列表行前的圆点 / 数字 / 复选框是一个整体：光标不会停在标记里，Backspace 一次删掉整个标记（嵌套项先退一级），行尾 Delete 一次并入下一项，← 从文字开头直接到上一行末尾。关闭后恢复 Obsidian 原生的逐字符删除。")
+      .setName(paipaT("List markers as a unit"))
+      .setDesc(paipaT("In Live Preview, the bullet / number / checkbox in front of a list line acts as one unit: the cursor never stops inside it, one Backspace removes the whole marker (a nested item first moves up one level), Delete at the end of a line joins the next item, and ← from the start of the text goes straight to the end of the previous line. When off, Obsidian's native character-by-character deletion returns."))
       .addToggle(t=>t.setValue(this.plugin.settings.listMarkerFeaturesEnabled !== false).onChange(async v=>{
         this.plugin.settings.listMarkerFeaturesEnabled=v;
         setNsbListMarkerFeaturesEnabled(v);
@@ -5289,78 +5403,79 @@ var SettingsTab=class extends import_obsidian.PluginSettingTab{
       }));
 
     new import_obsidian.Setting(containerEl)
-      .setName("右键菜单增强")
-      .setDesc("整理右键菜单（本插件的菜单项集中为独立分组、替换原生删除项）以及「右键不选中整行」。关闭后右键菜单完全恢复 Obsidian 原生行为。")
+      .setName(paipaT("Context menu enhancements"))
+      .setDesc(paipaT("Tidies the right-click menu (this plugin's items are grouped in their own section and replace the native delete item) and enables \"Don't select line on right-click\". When off, the right-click menu fully returns to Obsidian's native behavior."))
       .addToggle(t=>t.setValue(this.plugin.settings.contextMenuFeaturesEnabled !== false).onChange(async v=>{
         this.plugin.settings.contextMenuFeaturesEnabled=v;
         await this.plugin.saveSettings();
       }));
 
     new import_obsidian.Setting(containerEl)
-      .setName("表格链接跳转（手机端）")
-      .setDesc("手机上点按表格中的内部链接直接跳转（与电脑端一致）；点按链接以外的位置仍进入编辑，无法解析的链接回落为编辑。")
+      .setName(paipaT("Table link navigation (mobile)"))
+      .setDesc(paipaT("On mobile, tapping an internal link in a table opens it directly (as on desktop); tapping anywhere else still starts editing, and links that can't be resolved fall back to editing."))
       .addToggle(t=>t.setValue(this.plugin.settings.mobileTableLinkNav !== false).onChange(async v=>{this.plugin.settings.mobileTableLinkNav=v;await this.plugin.saveSettings();}));
 
     new import_obsidian.Setting(containerEl)
-      .setName("返回页面时恢复滚动位置")
-      .setDesc("重新打开本次会话看过的页面（如点击链接后返回）时，恢复离开时的滚动位置；长页面不再落到底端。")
+      .setName(paipaT("Restore scroll position when returning to a page"))
+      .setDesc(paipaT("When you reopen a page viewed earlier in this session (for example, going back after following a link), the scroll position you left it at is restored; long pages no longer land at the bottom."))
       .addToggle(t=>t.setValue(this.plugin.settings.restoreScrollOnReopen !== false).onChange(async v=>{this.plugin.settings.restoreScrollOnReopen=v;await this.plugin.saveSettings();}));
 
-    containerEl.createEl("h3",{text:"细项"});
+    containerEl.createEl("h3",{text:paipaT("Details")});
 
     new import_obsidian.Setting(containerEl)
-      .setName("右键不选中整行")
-      .setDesc("右键只打开菜单，不先选中整行；已有选区会被保留。需开启「右键菜单增强」。")
+      .setName(paipaT("Don't select line on right-click"))
+      .setDesc(paipaT("Right-click only opens the menu without selecting the whole line first; an existing selection is kept. Requires \"Context menu enhancements\"."))
       .addToggle(t=>t.setValue(this.plugin.settings.suppressRightClickLineSelection !== false).onChange(async v=>{this.plugin.settings.suppressRightClickLineSelection=v;await this.plugin.saveSettings();}));
 
     new import_obsidian.Setting(containerEl)
-      .setName("启用段落间距")
-      .setDesc("在内容块之间添加 Notion 风格的额外间距。需开启「Notion 块功能」。")
+      .setName(paipaT("Enable block spacing"))
+      .setDesc(paipaT("Add Notion-style extra spacing between content blocks. Requires \"Notion blocks\"."))
       .addToggle(t=>t.setValue(this.plugin.settings.blockSpacingEnabled).onChange(async v=>{
         this.plugin.settings.blockSpacingEnabled=v;
         await this.plugin.saveSettings();
         this.display();
       }));
 
-    if (this.plugin.settings.developerMode !== true) {
-      containerEl.createEl("p",{text: "Editor Enhancer | Author: paipa | v" + this.plugin.manifest.version,cls:"setting-item-description"});
-      return;
-    }
+    // Developer-mode settings are no longer shown here (the stored
+    // developerMode value is left as is); the controls below are kept,
+    // unreachable, for reference.
+    containerEl.createEl("p",{text: "Editor Enhancer | Author: paipa | v" + this.plugin.manifest.version,cls:"setting-item-description"});
+    return;
 
-    containerEl.createEl("h3",{text:"拖拽图标"});
-    new import_obsidian.Setting(containerEl).setName("图标透明度").setDesc("悬停前的透明度（0.1 – 1.0）。")
+    containerEl.createEl("h3",{text:paipaT("Drag handle")});
+    new import_obsidian.Setting(containerEl).setName(paipaT("Handle opacity")).setDesc(paipaT("Opacity before hover (0.1 – 1.0)."))
       .addSlider(s=>s.setLimits(0.1,1,0.05).setValue(this.plugin.settings.handleOpacity).setDynamicTooltip().onChange(async v=>{this.plugin.settings.handleOpacity=v;await this.plugin.saveSettings();}));
-    new import_obsidian.Setting(containerEl).setName("图标距内容距离").setDesc("图标与内容左缘的间距（0 – 40 px）。")
+    new import_obsidian.Setting(containerEl).setName(paipaT("Handle distance from content")).setDesc(paipaT("Gap between the handle and the left edge of the content (0 – 40 px)."))
       .addSlider(s=>s.setLimits(0,40,1).setValue(this.plugin.settings.handleOffset).setDynamicTooltip().onChange(async v=>{this.plugin.settings.handleOffset=v;await this.plugin.saveSettings();}));
-    new import_obsidian.Setting(containerEl).setName("图标内边距").setDesc("圆点阵列到图标边框的距离（1 – 16 px）。")
+    new import_obsidian.Setting(containerEl).setName(paipaT("Handle padding")).setDesc(paipaT("Distance from the dot grid to the handle's border (1 – 16 px)."))
       .addSlider(s=>s.setLimits(1,16,0.5).setValue(this.plugin.settings.handleSize).setDynamicTooltip().onChange(async v=>{this.plugin.settings.handleSize=v;await this.plugin.saveSettings();}));
-    new import_obsidian.Setting(containerEl).setName("圆点直径").setDesc("1.5 – 8 px。")
+    new import_obsidian.Setting(containerEl).setName(paipaT("Dot diameter")).setDesc(paipaT("1.5 – 8 px."))
       .addSlider(s=>s.setLimits(1.5,8,0.5).setValue(this.plugin.settings.dotSize).setDynamicTooltip().onChange(async v=>{this.plugin.settings.dotSize=v;await this.plugin.saveSettings();}));
-    new import_obsidian.Setting(containerEl).setName("圆点间距").setDesc("1 – 6 px。")
+    new import_obsidian.Setting(containerEl).setName(paipaT("Dot spacing")).setDesc(paipaT("1 – 6 px."))
       .addSlider(s=>s.setLimits(1,6,0.5).setValue(this.plugin.settings.dotGap).setDynamicTooltip().onChange(async v=>{this.plugin.settings.dotGap=v;await this.plugin.saveSettings();}));
-    new import_obsidian.Setting(containerEl).setName("圆点灰度").setDesc("0 = 白，100 = 黑。")
+    new import_obsidian.Setting(containerEl).setName(paipaT("Dot gray level")).setDesc(paipaT("0 = white, 100 = black."))
       .addSlider(s=>s.setLimits(0,100,1).setValue(this.plugin.settings.dotGray).setDynamicTooltip().onChange(async v=>{this.plugin.settings.dotGray=v;await this.plugin.saveSettings();}));
-    new import_obsidian.Setting(containerEl).setName("Toggle 三角图标大小").setDesc("10 – 28 px。")
+    new import_obsidian.Setting(containerEl).setName(paipaT("Toggle triangle size")).setDesc(paipaT("10 – 28 px."))
       .addSlider(s=>s.setLimits(10,28,1).setValue(this.plugin.settings.toggleIconSize || 16).setDynamicTooltip().onChange(async v=>{this.plugin.settings.toggleIconSize=v;await this.plugin.saveSettings();}));
 
-    containerEl.createEl("h3",{text:"拖拽插入位置横线"});
-    new import_obsidian.Setting(containerEl).setName("横线粗细").setDesc("1 – 8 px。")
+    containerEl.createEl("h3",{text:paipaT("Drop indicator line")});
+    new import_obsidian.Setting(containerEl).setName(paipaT("Line thickness")).setDesc(paipaT("1 – 8 px."))
       .addSlider(s=>s.setLimits(1,8,0.5).setValue(this.plugin.settings.lineHeight).setDynamicTooltip().onChange(async v=>{this.plugin.settings.lineHeight=v;await this.plugin.saveSettings();}));
-    new import_obsidian.Setting(containerEl).setName("横线不透明度").setDesc("0.1 – 1.0。")
+    new import_obsidian.Setting(containerEl).setName(paipaT("Line opacity")).setDesc(paipaT("0.1 – 1.0."))
       .addSlider(s=>s.setLimits(0.1,1,0.05).setValue(this.plugin.settings.lineOpacity).setDynamicTooltip().onChange(async v=>{this.plugin.settings.lineOpacity=v;await this.plugin.saveSettings();}));
 
     if (this.plugin.settings.blockSpacingEnabled) {
-      containerEl.createEl("h3",{text:"Notion 风格行间距"});
+      containerEl.createEl("h3",{text:paipaT("Notion-style spacing")});
       new import_obsidian.Setting(containerEl)
-        .setName("Block 间距")
-        .setDesc("相邻内容块之间的间距（2 – 32 px）。")
+        .setName(paipaT("Block spacing"))
+        .setDesc(paipaT("Spacing between adjacent content blocks (2 – 32 px)."))
         .addSlider(s=>s.setLimits(2,32,1).setValue(this.plugin.settings.blockSpacingPx).setDynamicTooltip().onChange(async v=>{
           this.plugin.settings.blockSpacingPx=v;
           await this.plugin.saveSettings();
         }));
       new import_obsidian.Setting(containerEl)
-        .setName("Block 内行间距")
-        .setDesc("同一 block 内多行文字的额外行距（0 = 主题默认，最大 20 px）。")
+        .setName(paipaT("Line spacing within a block"))
+        .setDesc(paipaT("Extra spacing between lines of text within one block (0 = theme default, up to 20 px)."))
         .addSlider(s=>s.setLimits(0,20,1).setValue(this.plugin.settings.lineSpacingPx).setDynamicTooltip().onChange(async v=>{
           this.plugin.settings.lineSpacingPx=v;
           await this.plugin.saveSettings();

@@ -59,7 +59,7 @@ All optional. Each plugin works on its own.
 
 ## Notes
 
-- The settings page is currently in Chinese. An English version is planned.
+- Interface in English and Chinese: follows Obsidian's language by default, or pick one under the plugin's **Language** setting.
 - Reading view is not changed. Everything happens in Live Preview.
 
 ## Install
