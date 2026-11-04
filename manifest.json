@@ -1,0 +1,10 @@
+{
+  "id": "editor-enhancer",
+  "name": "Editor Enhancer",
+  "version": "1.2.1",
+  "minAppVersion": "0.15.0",
+  "description": "Notion-style block dragging, toggle lists, context-menu polish, scroll-position memory, and mobile table link navigation. Every feature group can be toggled independently.",
+  "author": "paipa",
+  "authorUrl": "https://github.com/Paipa03",
+  "isDesktopOnly": false
+}

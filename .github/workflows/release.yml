@@ -1,0 +1,37 @@
+# Pushing a tag like 1.2.3 (no "v", must equal manifest.json "version")
+# creates a GitHub release with the files Obsidian downloads.
+name: Release
+
+on:
+  push:
+    tags: ["*.*.*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # checkout turns annotated tags into lightweight ones; refetch to keep the message.
+      - run: git fetch --force --tags
+
+      - name: Tag must match manifest version
+        run: |
+          v=$(jq -r .version manifest.json)
+          if [ "$v" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME does not match manifest.json version $v"
+            exit 1
+          fi
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          files="main.js manifest.json"
+          [ -f styles.css ] && files="$files styles.css"
+          gh release create "$GITHUB_REF_NAME" $files --title "$GITHUB_REF_NAME" --notes-from-tag
