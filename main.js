@@ -1,5 +1,5 @@
 /*
- * Editor Enhancer 1.3.0 - by paipa, MIT License
+ * Editor Enhancer 1.3.1 - by paipa, MIT License
  * https://github.com/Paipa03/obsidian-editor-enhancer
  *
  * Maintainer notes:
@@ -345,6 +345,20 @@ function isToggleOpenLineText(text) {
 }
 function isToggleCloseLineText(text) {
   return NSB_TOGGLE_CLOSE_RE.test(text || "");
+}
+// A transaction that carries someone's complete new version of the note, not an
+// edit that slipped onto a marker: "set" is Obsidian syncing the editor to the
+// file after an outside write (a script, a sync plugin, another app); a
+// replacement of the whole document with no userEvent is editor.setValue().
+// Guards must let these through unchanged. Blocking one leaves a stale editor
+// whose next save writes the old note back over the file.
+function isWholeNoteSync(tr, ue) {
+  if (!tr.docChanged) return false;
+  if (/^set(\.|$)/.test(ue)) return true;
+  if (ue) return false;
+  let count = 0, whole = false;
+  tr.changes.iterChanges((fromA, toA) => { count++; whole = fromA === 0 && toA === tr.startState.doc.length; });
+  return count === 1 && whole;
 }
 function isToggleMarkerLineText(text) {
   return isToggleOpenLineText(text) || isToggleCloseLineText(text);
@@ -2314,6 +2328,7 @@ var NotionStyleBlocksPlugin = class extends import_obsidian.Plugin {
       const ue = tr.annotation(import_state.Transaction.userEvent) || "";
       if (ue.indexOf("nsb") >= 0 || ue === "undo" || ue === "redo" ||
           /^undo|^redo/.test(ue)) return tr;
+      if (isWholeNoteSync(tr, ue)) return tr;
       if (!tr.docChanged) return self.guardToggleSelection(tr, fieldValue.atomic);
       return self.guardToggleMarkerChanges(tr, ue);
     });
